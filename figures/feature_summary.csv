@@ -1,0 +1,11 @@
+,mean,min,50%,max
+RevolvingUtilizationOfUnsecuredLines,0.32,0.0,0.15,1.09
+age,52.29,21.0,52.0,99.0
+NumberOfTime30-59DaysPastDueNotWorse,0.28,0.0,0.0,20.0
+DebtRatio,315.91,0.0,0.37,4977.0
+MonthlyIncome,6133.42,0.0,5390.0,23000.0
+NumberOfOpenCreditLinesAndLoans,8.47,0.0,8.0,58.0
+NumberOfTimes90DaysLate,0.13,0.0,0.0,20.0
+NumberRealEstateLoansOrLines,1.02,0.0,1.0,54.0
+NumberOfTime60-89DaysPastDueNotWorse,0.1,0.0,0.0,20.0
+NumberOfDependents,0.74,0.0,0.0,20.0
