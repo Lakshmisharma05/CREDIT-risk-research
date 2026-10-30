@@ -67,7 +67,7 @@ Statistics below are from the training split before cleaning.
 | Feature | Problem observed | Raw value |
 |---|---|---|
 | age | Impossible and extreme ages | min 0, max 109 |
-| NumberOfTime30-59DaysPastDueNotWorse, NumberOfTimes90DaysLate, NumberOfTime60-89DaysPastDueNotWorse | Placeholder codes (96 and 98) instead of real counts; the 75th percentile is 0 | max 98 |
+| NumberOfTime30-59DaysPastDueNotWorse, NumberOfTimes90DaysLate, NumberOfTime60-89DaysPastDueNotWorse | Special codes (96 and 98) instead of real counts: 269 borrowers have 96 or 98 in all three columns at the same time, while real values stop at 17 | max 98 |
 | RevolvingUtilizationOfUnsecuredLines | A ratio that should be close to 0 to 1 | max 50,708 |
 | DebtRatio | Extreme values; mean 352 against a median of 0.37 | max 329,664 |
 | MonthlyIncome | Extreme values; median 5,390 | max 3,008,750 |
@@ -81,11 +81,14 @@ Statistics below are from the training split before cleaning.
 | 1. Split first | 80/20 stratified split, `random_state=42` | Keeps the 6.68% default rate in both sets. All statistics for later steps come from the training set only, which prevents data leakage. |
 | 2. Missing values | Median imputation with medians from the training set, applied to both sets | Income is highly skewed, so the median is more robust than the mean. Using only training statistics avoids leakage. |
 | 3. Invalid ages | Removed rows with age below 18 or above 100 (14 rows: 8 in train, 6 in test) | These values are impossible for a loan applicant. Very few rows were affected. |
-| 4. Late-payment counts | Capped at 20 | Values of 96 and 98 are placeholder codes, not real counts. Capping keeps the rows and limits their influence. |
+| 4. Late-payment counts | Capped at 20 | 269 borrowers (0.18%) have the value 96 or 98 in all three past-due columns simultaneously, while the largest other value is 17. These are not real counts. Their default rate is 54.6% against 6.6% for all other borrowers, so the rows are informative; capping keeps them as the highest values without deleting them. |
 | 5. Extreme ratios and income | Capped at the 99th percentile of the training set (utilization 1.09, DebtRatio 4,977, MonthlyIncome 23,000) | Outliers are capped rather than deleted so that no borrowers are lost. Caps come from training data and are applied to both sets. |
 | 6. No scaling | Not applied in the data files | Gradient boosting does not need scaling. Scaling for Logistic Regression is done inside the modeling pipeline. |
 
 Results after cleaning: train 119,992 rows, test 29,994 rows, default rate 6.68% in both, no missing values.
+**Note on the 96/98 codes:** The dataset documentation does not explain what these values mean, so we treat them as special codes rather than real counts, based on the evidence above. This interpretation is an assumption and could be confirmed with the dataset's source or prior studies that use it.
+
+**Assumption on temporal validity:** The past-due features describe a borrower's history up to the observation date, while the target covers the following two years. We therefore treat these features as available at prediction time and do not regard them as target leakage. This assumption comes from the dataset description and should be confirmed for any real deployment.
 
 **Known limitation:** `DebtRatio` stays unusually large for borrowers whose income was missing (mean about 316 against a median of 0.37 after capping). This is a known quirk of the dataset. Tree-based models are not affected much, so we capped and kept the feature.
 
