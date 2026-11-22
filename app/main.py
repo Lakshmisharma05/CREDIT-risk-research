@@ -249,7 +249,7 @@ class CredLensApp(QMainWindow):
                 dataset_description = "Dataset successfully loaded"
 
                 total_records = f"{len(df):,}"
-                total_features = str(len(df.columns))
+                total_features = f"{len(df.columns):,}"
                 missing_values = f"{int(df.isnull().sum().sum()):,}"
                 duplicate_records = f"{int(df.duplicated().sum()):,}"
             except Exception as e:
@@ -270,9 +270,9 @@ class CredLensApp(QMainWindow):
                 )
                 predictions = pd.read_csv(prediction_path)
 
-                low_risk = str((predictions["risk_band"] == "Low").sum())
-                medium_risk = str((predictions["risk_band"] == "Medium").sum())
-                high_risk = str((predictions["risk_band"] == "High").sum())
+                low_risk = f"{(predictions['risk_band'] == 'Low').sum():,}"
+                medium_risk = f"{(predictions['risk_band'] == 'Medium').sum():,}"
+                high_risk = f"{(predictions['risk_band'] == 'High').sum():,}"
                 avg_probability = f"{predictions['probability'].mean():.1%}"
 
             except Exception as e:
@@ -345,7 +345,7 @@ class CredLensApp(QMainWindow):
                 "Dataset Status: Successfully Connected\n"
                 "Data Intelligence: EDA and Outlier Analysis Available\n"
                 "Model Integration: Successfully Connected\n"
-                "Explainability: SHAP integration pending\n\n"
+                "Explainability: SHAP explanations available\n\n"
                 "Explore the modules to understand dataset quality, "
                 "feature patterns and credit risk insights."
             )
@@ -365,10 +365,18 @@ class CredLensApp(QMainWindow):
             try:
                 csv_path = Path(__file__).parent.parent / "cs-training.csv"
                 df = pd.read_csv(csv_path)
+                df = df.drop(
+                    columns=["Unnamed: 0"], errors="ignore"
+                )
+
+                target = df["SeriousDlqin2yrs"]
+                feature_df = df.drop(columns=["SeriousDlqin2yrs"])
+
+                total_features = len(feature_df.columns)
 
                 info = [
                     ("TOTAL RECORDS", f"{df.shape[0]:,}"),
-                    ("TOTAL FEATURES", str(df.shape[1])),
+                    ("TOTAL FEATURES", str(total_features)),
                     ("MISSING VALUES", f"{int(df.isnull().sum().sum()):,}"),
                     ("DUPLICATE RECORDS", f"{int(df.duplicated().sum()):,}")
                 ]
@@ -389,10 +397,10 @@ class CredLensApp(QMainWindow):
                 preview_title.setObjectName("pageTitle")
                 layout.addWidget(preview_title)
 
-                preview = df.head(10)
+                preview = feature_df.head(10)
                 layout.addWidget(
                     self.make_table(
-                        [str(c) for c in df.columns],
+                        [str(c) for c in feature_df.columns],
                         preview.values.tolist(),
                         350
                     )
@@ -404,9 +412,9 @@ class CredLensApp(QMainWindow):
                 layout.addWidget(quality_title)
 
                 missing_df = pd.DataFrame({
-                    "Feature": df.columns,
-                    "Missing Values": df.isnull().sum().values,
-                    "Missing (%)": (df.isnull().mean().values * 100).round(2)
+                    "Feature": feature_df.columns,
+                    "Missing Values": feature_df.isnull().sum().values,
+                    "Missing (%)": (feature_df.isnull().mean().values * 100).round(2)
                 })
 
                 layout.addWidget(
@@ -427,7 +435,7 @@ class CredLensApp(QMainWindow):
                 ax = figure.add_subplot(111)
                 ax.set_facecolor("#17243A")
 
-                missing_counts = df.isnull().sum()
+                missing_counts = feature_df.isnull().sum()
                 missing_counts = missing_counts[missing_counts > 0]
 
                 if missing_counts.empty:
@@ -467,7 +475,7 @@ class CredLensApp(QMainWindow):
                 for i, feature in enumerate(features):
                     ax = figure2.add_subplot(2, 2, i + 1)
                     ax.hist(
-                        df[feature].dropna(),
+                        feature_df[feature].dropna(),
                         bins=30,
                         edgecolor="white"
                     )
@@ -481,7 +489,7 @@ class CredLensApp(QMainWindow):
                 correlation_title = QLabel("Correlation Analysis")
                 correlation_title.setObjectName("heading")
                 layout.addWidget(correlation_title)
-                corr = df.corr(numeric_only=True)
+                corr = feature_df.corr(numeric_only=True)
                 figure3 = Figure(figsize=(10, 8))
                 canvas3 = FigureCanvas(figure3)
                 ax = figure3.add_subplot(111)
@@ -498,7 +506,7 @@ class CredLensApp(QMainWindow):
                 outlier_title = QLabel("Outlier Analysis")
                 outlier_title.setObjectName("heading")
                 layout.addWidget(outlier_title)
-                numerical_df = df.select_dtypes(include="number")
+                numerical_df = feature_df.select_dtypes(include="number")
                 outlier_rows = []
                 for column in numerical_df.columns:
                     Q1 = numerical_df[column].quantile(0.25)
@@ -567,7 +575,7 @@ class CredLensApp(QMainWindow):
 
                     info = [
                         ("TOTAL BORROWERS", f"{total:,}"),
-                        ("HIGH-RISK CASES", f"{default_count:,}"),
+                        ("ACTUAL DEFAULT CASES", f"{default_count:,}"),
                         ("NON-DEFAULT CASES", f"{non_default:,}"),
                         ("DEFAULT RATE", f"{default_rate:.2f}%")
                     ]
@@ -597,7 +605,7 @@ class CredLensApp(QMainWindow):
                         color=["#60A5FA", "#F87171"]
                     )
                     ax.set_ylabel("Number of Borrowers")
-                    ax.set_title("Borrower Default Distribution")
+                    ax.set_title("Historical Actual Default Distribution")
 
                     figure.tight_layout()
                     canvas.setMinimumHeight(350)
@@ -947,7 +955,7 @@ class CredLensApp(QMainWindow):
                 layout.addLayout(metric_grid)
 
                 # Age-group exploratory analysis
-                fairness_title = QLabel("Age Group Fairness Review")
+                fairness_title = QLabel("Age Group Fairness  Review")
                 fairness_title.setObjectName("pageTitle")
                 layout.addWidget(fairness_title)
 
@@ -1084,12 +1092,23 @@ class CredLensApp(QMainWindow):
             layout.addSpacing(15)
 
             sections = [
-                ("DATA INTELLIGENCE", "Dataset overview, data quality, missing values and EDA"),
-                ("RISK ANALYSIS", "Historical borrower default distribution"),
-                ("EXPLAINABILITY", "SHAP-based explanations pending model integration"),
-                ("SIMULATION", "Borrower profile input interface ready; prediction pending"),
-                ("FAIRNESS", "Group-wise fairness evaluation pending"),
-                ("RELIABILITY", "Model validation metrics pending integration")
+                ("DATA INTELLIGENCE",
+                "Dataset overview, data quality, missing values and feature analysis"),
+
+                ("RISK ANALYSIS",
+                "Historical default distribution and model-predicted risk categories"),
+
+                ("EXPLAINABILITY",
+                "SHAP-based explanations of calibrated default probability"),
+
+                ("SIMULATION",
+                "Interactive borrower risk simulation using model predictions"),
+
+                ("FAIRNESS",
+                "Exploratory age-group comparison of actual defaults and predicted risk"),
+
+                ("RELIABILITY",
+                "Calibrated model performance metrics from holdout test evaluation")
             ]
 
             for heading, detail in sections:
@@ -1099,8 +1118,10 @@ class CredLensApp(QMainWindow):
             layout.addSpacing(15)
 
             note = QLabel(
-                "Note: Final model performance and explainability "
-                "results will be included after trained model integration."
+                "Note: Model predictions are decision-support estimates, "
+                "not guaranteed outcomes. SHAP explanations describe "
+                "feature contributions, while age-group comparisons "
+                "are exploratory and do not certify fairness."
             )
             note.setObjectName("muted")
             note.setWordWrap(True)
